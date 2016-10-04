@@ -84,6 +84,11 @@ Filename: cmd; Parameters: "/c powershell -command ""import-module servermanager
 Filename: cmd; Parameters: "/c powershell -command ""import-module servermanager; add-windowsfeature web-asp-net"""; StatusMsg: "Installing IIS"; Flags: 64bit; Check: IsServer2012;
 Filename: cmd; Parameters: "/c powershell -command ""import-module servermanager; add-windowsfeature web-asp-net45"""; StatusMsg: "Installing IIS"; Flags: 64bit; Check: IsServer2012;
 Filename: cmd; Parameters: "/c powershell -command ""import-module servermanager; add-windowsfeature web-mgmt-console"""; StatusMsg: "Installing IIS"; Flags: 64bit; Check: IsServer2012;
+
+;Install IIS Server 2016
+Filename: cmd; Parameters: "/c powershell -command ""import-module servermanager; add-windowsfeature web-server"""; StatusMsg: "Installing IIS"; Flags: 64bit; Check: IsServer2016;
+Filename: cmd; Parameters: "/c powershell -command ""import-module servermanager; add-windowsfeature web-asp-net45"""; StatusMsg: "Installing IIS"; Flags: 64bit; Check: IsServer2016;
+Filename: cmd; Parameters: "/c powershell -command ""import-module servermanager; add-windowsfeature web-mgmt-console"""; StatusMsg: "Installing IIS"; Flags: 64bit; Check: IsServer2016;
  
 ;Create Web Application
 Filename: cmd; Parameters: "/c {sys}\inetsrv\appcmd add app /site.name:""Default Web Site"" /path:/clonedeploy /physicalpath:""{app}\web"" "; 
@@ -115,8 +120,8 @@ Filename: cmd; Parameters: "/c mklink /J ""{app}\tftpboot\proxy\efi32\images"" "
 Filename: cmd; Parameters: "/c mklink /J ""{app}\tftpboot\proxy\efi64\kernels"" ""{app}\tftpboot\kernels"""; StatusMsg: "Creating Symlinks";
 Filename: cmd; Parameters: "/c mklink /J ""{app}\tftpboot\proxy\efi64\images"" ""{app}\tftpboot\images"""; StatusMsg: "Creating Symlinks";
 [Registry]
-Root: "HKLM32"; Subkey: "SOFTWARE\CloneDeploy"; ValueType: string; ValueName: "AppVersion"; ValueData: "1100"; Flags: createvalueifdoesntexist; Check: not IsWin64
-Root: "HKLM64"; Subkey: "SOFTWARE\CloneDeploy"; ValueType: string; ValueName: "AppVersion"; ValueData: "1100"; Flags: createvalueifdoesntexist; Check: IsWin64
+Root: "HKLM32"; Subkey: "SOFTWARE\CloneDeploy"; ValueType: string; ValueName: "AppVersion"; ValueData: "1200"; Flags: createvalueifdoesntexist; Check: not IsWin64
+Root: "HKLM64"; Subkey: "SOFTWARE\CloneDeploy"; ValueType: string; ValueName: "AppVersion"; ValueData: "1200"; Flags: createvalueifdoesntexist; Check: IsWin64
 
 [Code]
 var
@@ -129,8 +134,8 @@ begin
 AuthPage := CreateInputQueryPage(wpWelcome,
     'Setup', 'Information Needed',
     'A Read Only And Read/Write SMB Share Will Be Created.  Create A Password For Each.  Also Create A Database Password.  Do Not Use The Following Characters < > " Ampersand  '+Chr(39)+'');
-  AuthPage.Add('Share Read Only Password: (Complexity Requirements Apply To Server 2008, 2012)', True);
-  AuthPage.Add('Share Read Write Password: (Complexity Requirements Apply To Server 2008, 2012)', True);
+  AuthPage.Add('Share Read Only Password: (Complexity Requirements Apply To Server versions)', True);
+  AuthPage.Add('Share Read Write Password: (Complexity Requirements Apply To Server versions)', True);
   AuthPage.Add('Database Password:', True);
 end;
 
@@ -200,6 +205,21 @@ begin
 
   if (Version.Major = 6)  and
      ((Version.Minor = 2) or (Version.Minor = 3)) and
+     (Version.ProductType = VER_NT_SERVER)
+  then
+    Result := True
+  else
+    Result := False
+end;
+
+function IsServer2016(): Boolean;
+var
+  Version: TWindowsVersion;
+begin
+  GetWindowsVersionEx(Version);
+               Log('The value is');
+  if (Version.Major = 10)  and
+     (Version.Minor = 0) and
      (Version.ProductType = VER_NT_SERVER)
   then
     Result := True
