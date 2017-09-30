@@ -1,5 +1,5 @@
 #define MyAppName "CloneDeploy"
-#define MyAppVersion "1.2.0"
+#define MyAppVersion "1.3.0"
 #define MyAppPublisher "CloneDeploy"
 #define MyAppURL "http://clonedeploy.org"
 
@@ -23,7 +23,7 @@ OutputBaseFilename=setup
 Compression=lzma
 SolidCompression=true
 Uninstallable=true
-VersionInfoVersion=1.2.0
+VersionInfoVersion=1.3.0
 VersionInfoCompany=CloneDeploy
 VersionInfoDescription=CloneDeploy Server Setup
 VersionInfoCopyright=2016
@@ -31,7 +31,7 @@ AlwaysRestart=false
 RestartIfNeededByRun=false
 AppContact=http://clonedeploy.org
 UninstallDisplayName=CloneDeploy Server
-AppVerName=1.2.0
+AppVerName=1.3.0
 AppComments=CloneDeploy
 MinVersion=0,6.1
 SetupLogging=yes
@@ -56,9 +56,9 @@ Filename: cmd; Parameters: "/c net share ""cd_share={app}\cd_dp"" /grant:cd_shar
 Filename: cmd; Parameters: "/c icacls ""{app}\cd_dp"" /T /C /grant cd_share_ro:(OI)(CI)RX /grant cd_share_rw:(OI)(CI)F"; StatusMsg: "Creating SMB Shares";
 
 ;Install MariaDB
-Filename: msiexec; Parameters: "/i ""{userappdata}\clonedeploy\mariadb-10.1.11-win32.msi"" SERVICENAME=mysql-cd PASSWORD={code:GetDBPass} UTF8=1 /qb"; StatusMsg: "Installing MariaDB";
-Filename: "{pf32}\MariaDB 10.1\bin\mysql.exe"; Parameters: "--user=root --password={code:GetDBPass} --execute=""create database clonedeploy"" -v"; StatusMsg: "Creating Database";
-Filename: "{pf32}\MariaDB 10.1\bin\mysql.exe"; Parameters: "--user=root --password={code:GetDBPass} --database=clonedeploy --execute=""source {code:MySQLAppData}/clonedeploy/cd.sql"" -v"; StatusMsg: "Creating Database";
+Filename: msiexec; Parameters: "/i ""{userappdata}\clonedeploy\mariadb-10.2.8-win32.msi"" SERVICENAME=mysql-cd PASSWORD={code:GetDBPass} UTF8=1 /qb"; StatusMsg: "Installing MariaDB";
+Filename: "{pf32}\MariaDB 10.2\bin\mysql.exe"; Parameters: "--user=root --password={code:GetDBPass} --execute=""create database clonedeploy"" -v"; StatusMsg: "Creating Database";
+Filename: "{pf32}\MariaDB 10.2\bin\mysql.exe"; Parameters: "--user=root --password={code:GetDBPass} --database=clonedeploy --execute=""source {code:MySQLAppData}/clonedeploy/cd.sql"" -v"; StatusMsg: "Creating Database";
 
 ;Install Tftpd32
 Filename: {app}\tftpd32\tftpd32_svc; Parameters: "-install"; StatusMsg: "Setting Up Tftp Server";
@@ -91,13 +91,14 @@ Filename: cmd; Parameters: "/c powershell -command ""import-module servermanager
 Filename: cmd; Parameters: "/c powershell -command ""import-module servermanager; add-windowsfeature web-mgmt-console"""; StatusMsg: "Installing IIS"; Flags: 64bit; Check: IsServer2016;
  
 ;Create Web Application
-Filename: cmd; Parameters: "/c {sys}\inetsrv\appcmd add app /site.name:""Default Web Site"" /path:/clonedeploy /physicalpath:""{app}\web"" "; 
+Filename: cmd; Parameters: "/c {sys}\inetsrv\appcmd add app /site.name:""Default Web Site"" /path:/clonedeploy /physicalpath:""{app}\frontend"" ";
+Filename: cmd; Parameters: "/c {sys}\inetsrv\appcmd add app /site.name:""Default Web Site"" /path:/clonedeploy/api /physicalpath:""{app}\application"" "; 
 
 ;Register Web Application
 Filename: cmd; Parameters: "/c {win}\microsoft.net\framework\v4.0.30319\aspnet_regiis.exe -i -enable"; Check: IsWin7 or IsServer2008;
 
 ;Set IIS Permissions
-Filename: cmd; Parameters: "/c icacls ""{app}\web"" /T /C /grant IIS_IUSRS:(OI)(CI)M"; StatusMsg: "Installing IIS";
+Filename: cmd; Parameters: "/c icacls ""{app}\application"" /T /C /grant IIS_IUSRS:(OI)(CI)M"; StatusMsg: "Installing IIS";Filename: cmd; Parameters: "/c icacls ""{app}\frontend"" /T /C /grant IIS_IUSRS:(OI)(CI)M"; StatusMsg: "Installing IIS";
 Filename: cmd; Parameters: "/c icacls ""{app}\cd_dp"" /T /C /grant IIS_IUSRS:(OI)(CI)M"; StatusMsg: "Installing IIS";
 Filename: cmd; Parameters: "/c icacls ""{app}\tftpboot"" /T /C /grant IIS_IUSRS:(OI)(CI)M"; StatusMsg: "Installing IIS";
 
@@ -120,8 +121,8 @@ Filename: cmd; Parameters: "/c mklink /J ""{app}\tftpboot\proxy\efi32\images"" "
 Filename: cmd; Parameters: "/c mklink /J ""{app}\tftpboot\proxy\efi64\kernels"" ""{app}\tftpboot\kernels"""; StatusMsg: "Creating Symlinks";
 Filename: cmd; Parameters: "/c mklink /J ""{app}\tftpboot\proxy\efi64\images"" ""{app}\tftpboot\images"""; StatusMsg: "Creating Symlinks";
 [Registry]
-Root: "HKLM32"; Subkey: "SOFTWARE\CloneDeploy"; ValueType: string; ValueName: "AppVersion"; ValueData: "1200"; Flags: createvalueifdoesntexist; Check: not IsWin64
-Root: "HKLM64"; Subkey: "SOFTWARE\CloneDeploy"; ValueType: string; ValueName: "AppVersion"; ValueData: "1200"; Flags: createvalueifdoesntexist; Check: IsWin64
+Root: "HKLM32"; Subkey: "SOFTWARE\CloneDeploy"; ValueType: string; ValueName: "AppVersion"; ValueData: "1300"; Flags: createvalueifdoesntexist; Check: not IsWin64
+Root: "HKLM64"; Subkey: "SOFTWARE\CloneDeploy"; ValueType: string; ValueName: "AppVersion"; ValueData: "1300"; Flags: createvalueifdoesntexist; Check: IsWin64
 
 [Code]
 var
@@ -246,13 +247,13 @@ procedure UpdateStrings;
 var
     FileData: String;
 begin
-    LoadStringFromFile(ExpandConstant('{app}\web\web.config'), FileData);
+    LoadStringFromFile(ExpandConstant('{app}\application\web.config'), FileData);
     StringChange(FileData, 'xx_marker1_xx', ExpandConstant('{code:GetDBPass}'));
-    SaveStringToFile(ExpandConstant('{app}\web\web.config'), FileData, False);
+    SaveStringToFile(ExpandConstant('{app}\application\web.config'), FileData, False);
 
-    LoadStringFromFile(ExpandConstant('{app}\web\web.config'), FileData);
+    LoadStringFromFile(ExpandConstant('{app}\application\web.config'), FileData);
     StringChange(FileData, 'xx_marker2_xx', ExpandConstant('{code:GetROPass}{code:GetRWPass}'));
-    SaveStringToFile(ExpandConstant('{app}\web\web.config'), FileData, False);
+    SaveStringToFile(ExpandConstant('{app}\application\web.config'), FileData, False);
 
     LoadStringFromFile(ExpandConstant('{app}\tftpd32\tftpd32.ini'), FileData);
     StringChange(FileData, 'xx_marker1_xx', ExpandConstant('{app}\tftpboot'));
@@ -339,6 +340,8 @@ begin
 
     result := success and (install = 1) and (serviceCount >= service);
 end;
+
+
 
 function InitializeSetup(): Boolean;
 
